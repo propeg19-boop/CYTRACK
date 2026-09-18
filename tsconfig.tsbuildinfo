@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/icons.tsx","./src/lib/supabase.ts","./src/screens/Calendar.tsx","./src/screens/Log.tsx","./src/screens/Settings.tsx","./src/screens/Today.tsx"],"version":"5.9.3"}
