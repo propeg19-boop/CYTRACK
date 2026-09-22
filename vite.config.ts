@@ -8,6 +8,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // injectManifest (not the default generateSW) because push notifications
+      // need a hand-written 'push' event listener — generateSW's auto-built
+      // service worker has no way to add custom event handlers.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Cycle Tracker',
