@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* rose-700 on white ≈ 5.9:1 contrast — passes AA with margin, unlike rose-600 (~4.5:1, borderline) */
+  --color-primary: #be123c;
+  --color-primary-soft: #fde2e7;
+  --color-ink: #1f2937;
+  --color-muted: #6b7280;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  color: var(--color-ink);
+  background: var(--color-surface);
+}
