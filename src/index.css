@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CYTRACK THEME CSS CUSTOM PROPERTIES ────────────── */
+:root {
+  /* Default Bloom Garden theme (overridden by JS) */
+  --cy-bg: #FAF6F0;
+  --cy-bg-secondary: #F5EBE1;
+  --cy-surface: #FFFFFF;
+  --cy-surface-soft: #FFF9F5;
+  --cy-primary: #D96B43;
+  --cy-primary-soft: #FCEEE9;
+  --cy-primary-hover: #C0532C;
+  --cy-accent: #B98FA5;
+  --cy-accent-soft: #FAF4F7;
+  --cy-text: #2C221E;
+  --cy-text-muted: #7A6F68;
+  --cy-text-inverse: #FFFFFF;
+  --cy-border: #EADFD5;
+  --cy-border-soft: rgba(234, 223, 213, 0.6);
+  --cy-nav-bg: rgba(255, 255, 255, 0.92);
+  --cy-nav-border: rgba(234, 223, 213, 0.8);
+  --cy-card-bg: #FFFFFF;
+  --cy-card-border: rgba(234, 223, 213, 0.7);
+  --cy-shadow: rgba(44, 34, 30, 0.06);
+  --cy-gradient-from: #FCEEE9;
+  --cy-gradient-via: #FAF6F0;
+  --cy-gradient-to: #F5EBE1;
+  --cy-ring-active: #D96B43;
+  --cy-ring-track: #F4ECE1;
+  --cy-period-bg: #FCEEE9;
+  --cy-period-text: #9B3F1F;
+  --cy-success-bg: #E7ECE5;
+  --cy-success-text: #4E5A49;
+  --cy-danger-bg: #FEE2E2;
+  --cy-danger-text: #991B1B;
+}
+
+/* ─── BASE STYLES ─────────────────────────────────────── */
+@layer base {
+  body {
+    background-color: var(--cy-bg);
+    color: var(--cy-text);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.4s ease, color 0.3s ease;
+  }
+
+  /* Accessible focus indicators */
+  *:focus-visible {
+    outline: 2px solid var(--cy-primary);
+    outline-offset: 2px;
+  }
+
+  /* iOS safe area insets support */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 1rem);
+  }
+}
+
+/* ─── THEMED UTILITY CLASSES ──────────────────────────── */
+@layer components {
+  /* Themed card surface */
+  .cy-card {
+    background: var(--cy-card-bg);
+    border: 1px solid var(--cy-card-border);
+    box-shadow: 0 8px 30px -4px var(--cy-shadow), 0 4px 12px -2px var(--cy-shadow);
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .cy-card-soft {
+    background: var(--cy-card-bg);
+    border: 1px solid var(--cy-card-border);
+    box-shadow: 0 4px 20px -2px var(--cy-shadow), 0 2px 6px -1px var(--cy-shadow);
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  /* Themed text classes */
+  .cy-text { color: var(--cy-text); }
+  .cy-text-muted { color: var(--cy-text-muted); }
+  .cy-text-primary { color: var(--cy-primary); }
+  .cy-text-accent { color: var(--cy-accent); }
+
+  /* Themed backgrounds */
+  .cy-bg { background-color: var(--cy-bg); }
+  .cy-bg-secondary { background-color: var(--cy-bg-secondary); }
+  .cy-surface { background-color: var(--cy-surface); }
+  .cy-surface-soft { background-color: var(--cy-surface-soft); }
+  .cy-primary-bg { background-color: var(--cy-primary); }
+  .cy-primary-soft { background-color: var(--cy-primary-soft); }
+
+  /* Themed borders */
+  .cy-border { border-color: var(--cy-border); }
+  .cy-border-soft { border-color: var(--cy-border-soft); }
+
+  /* Gradient overlay background */
+  .cy-gradient-bg {
+    background: linear-gradient(
+      180deg,
+      var(--cy-gradient-from) 0%,
+      var(--cy-gradient-via) 50%,
+      var(--cy-gradient-to) 100%
+    );
+  }
+
+  /* Glassmorphic surfaces */
+  .glass-panel {
+    background: var(--cy-nav-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--cy-nav-border);
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  .glass-pill {
+    background: var(--cy-nav-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--cy-border-soft);
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  /* Primary button with theme-aware styling */
+  .cy-btn-primary {
+    background-color: var(--cy-primary);
+    color: var(--cy-text-inverse);
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .cy-btn-primary:hover {
+    background-color: var(--cy-primary-hover);
+    box-shadow: 0 4px 16px var(--cy-primary-soft);
+  }
+  .cy-btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  /* Themed navigation */
+  .cy-nav {
+    background: var(--cy-nav-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-color: var(--cy-nav-border);
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  /* Phase-specific accent cards */
+  .cy-phase-card {
+    background: linear-gradient(135deg, var(--cy-primary-soft), var(--cy-accent-soft));
+    border: 1px solid var(--cy-border-soft);
+  }
+
+  /* Input themed styling */
+  .cy-input {
+    background-color: var(--cy-surface-soft);
+    border: 1px solid var(--cy-border);
+    color: var(--cy-text);
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+  .cy-input:focus {
+    border-color: var(--cy-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cy-primary-soft);
+  }
+  .cy-input::placeholder {
+    color: var(--cy-text-muted);
+    opacity: 0.7;
+  }
+}
+
+/* ─── SCROLLBAR (themed) ────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--cy-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--cy-border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cy-text-muted);
+}
+
+/* ─── ANIMATIONS ──────────────────────────────────────── */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  100% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes gentleDrift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(10px, -10px) rotate(2deg); }
+  66% { transform: translate(-5px, 5px) rotate(-1deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* Smooth theme transition for all themed elements */
+.theme-transition,
+.theme-transition * {
+  transition: background-color 0.4s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
