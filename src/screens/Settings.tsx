@@ -16,6 +16,8 @@ import {
   Trash2,
   LogOut,
   AlertTriangle,
+  ShieldCheck,
+  HardDrive,
 } from 'lucide-react';
 import { ScreenTab } from '../components/BottomNav';
 
@@ -25,7 +27,7 @@ interface SettingsProps {
 }
 
 export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
-  const { user, profile, updateProfile, signOut, isDemoMode } = useAuth();
+  const { user, profile, updateProfile, signOut, deleteAccount, isDemoMode } = useAuth();
   const { theme } = useTheme();
   const c = theme.colors;
   const [reminders, setReminders] = useState<boolean>(profile?.reminder_enabled ?? false);
@@ -61,8 +63,7 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
     setDeleteError(null);
     try {
       if (isDemoMode || !isSupabaseConfigured) {
-        localStorage.clear();
-        await signOut();
+        await deleteAccount();
         return;
       }
 
@@ -81,7 +82,7 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
         throw new Error(data.error || 'Failed to delete account');
       }
 
-      await signOut();
+      await deleteAccount();
     } catch (err: any) {
       setDeleteError(err.message || 'Account deletion failed');
     } finally {
@@ -104,25 +105,50 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
   return (
     <div className="pb-24 pt-4 px-4 sm:px-6 max-w-lg mx-auto space-y-6 animate-fade-in relative z-10">
       <div>
-        <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: c.primary }}>Preferences</span>
+        <span className="text-xs font-bold tracking-wider uppercase" style={{ color: c.primary }}>Preferences</span>
         <h1 className="font-serif text-2xl sm:text-3xl font-bold mt-0.5" style={{ color: c.text }}>Settings</h1>
       </div>
 
       {/* Profile Card */}
-      <div className="rounded-3xl p-5 flex items-center justify-between" style={cardSoftStyle}>
+      <div className="rounded-[2rem] p-5 flex items-center justify-between" style={cardSoftStyle}>
         <div className="flex items-center gap-3.5">
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center"
-            style={{ background: c.bgSecondary, color: c.textMuted }}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm"
+            style={{ background: c.primarySoft, color: c.primary }}
           >
-            <User className="w-6 h-6" />
+            {user?.email?.charAt(0).toUpperCase() || <User className="w-6 h-6" />}
           </div>
           <div>
-            <h2 className="text-sm font-semibold" style={{ color: c.text }}>{user?.email || 'CYTRACK User'}</h2>
-            <p className="text-xs" style={{ color: c.textMuted }}>
-              {isDemoMode ? 'Local Demo Account' : 'Authenticated Profile'}
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold" style={{ color: c.text }}>{user?.email || 'CYTRACK User'}</h2>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase" style={{ background: c.primarySoft, color: c.primary }}>
+                Active
+              </span>
+            </div>
+            <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: c.textMuted }}>
+              <ShieldCheck className="w-3.5 h-3.5" style={{ color: c.primary }} />
+              <span>{isDemoMode ? 'Protected On-Device Vault' : 'Live Cloud Sync'}</span>
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Persistence Reassurance Card */}
+      <div
+        className="rounded-2xl p-4 flex items-start gap-3 text-xs"
+        style={{
+          background: c.surfaceSoft,
+          border: `1px solid ${c.border}`,
+        }}
+      >
+        <HardDrive className="w-4 h-4 shrink-0 mt-0.5" style={{ color: c.primary }} />
+        <div className="space-y-1">
+          <p className="font-bold" style={{ color: c.text }}>
+            Persistent Cycle Vault Active
+          </p>
+          <p style={{ color: c.textMuted }}>
+            Your account and cycle history are securely stored. If you sign out, your data remains safely preserved on this device, and you can log back in anytime without re-registering.
+          </p>
         </div>
       </div>
 
@@ -133,7 +159,7 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
       <div className="rounded-3xl p-6 space-y-4" style={cardStyle}>
         <div className="flex items-center gap-2">
           <Bell className="w-4 h-4" style={{ color: c.primary }} />
-          <h2 className="text-sm font-semibold" style={{ color: c.text }}>Notifications & Reminders</h2>
+          <h2 className="text-sm font-bold" style={{ color: c.text }}>Notifications & Reminders</h2>
         </div>
         <div className="space-y-3">
           <Toggle
@@ -149,9 +175,9 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
       <div className="rounded-3xl p-6 space-y-3" style={cardStyle}>
         <div className="flex items-center gap-2">
           <Heart className="w-4 h-4" style={{ color: c.primary }} />
-          <h2 className="text-sm font-semibold" style={{ color: c.text }}>Partner Sharing Mode</h2>
+          <h2 className="text-sm font-bold" style={{ color: c.text }}>Partner Sharing Mode</h2>
         </div>
-        <p className="text-xs" style={{ color: c.textMuted }}>
+        <p className="text-xs leading-relaxed" style={{ color: c.textMuted }}>
           Invite a partner or manage granular permission controls for what they see.
         </p>
         <Button variant="secondary" size="md" onClick={onOpenPartner} className="w-full">
@@ -163,9 +189,9 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
       <div className="rounded-3xl p-6 space-y-3" style={cardStyle}>
         <div className="flex items-center gap-2">
           <Download className="w-4 h-4" style={{ color: c.primary }} />
-          <h2 className="text-sm font-semibold" style={{ color: c.text }}>Export Personal Data</h2>
+          <h2 className="text-sm font-bold" style={{ color: c.text }}>Export Personal Data</h2>
         </div>
-        <p className="text-xs" style={{ color: c.textMuted }}>
+        <p className="text-xs leading-relaxed" style={{ color: c.textMuted }}>
           Download a complete JSON copy of your cycles, symptoms, mood history, and settings.
         </p>
         <Button
@@ -182,22 +208,22 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
 
       {/* Account Actions */}
       <div className="rounded-3xl p-6 space-y-3" style={cardStyle}>
-        <h2 className="text-sm font-semibold" style={{ color: c.text }}>Account Actions</h2>
+        <h2 className="text-sm font-bold" style={{ color: c.text }}>Account Actions</h2>
         <div className="space-y-2 pt-1">
           <Button
             variant="ghost"
             size="md"
             onClick={signOut}
-            className="w-full justify-start"
+            className="w-full justify-start text-xs font-semibold"
             icon={<LogOut className="w-4 h-4" />}
           >
-            Sign Out
+            Sign Out (Keep Account & Data Safe)
           </Button>
           <Button
             variant="ghost"
             size="md"
             onClick={() => setDeleteModalOpen(true)}
-            className="w-full justify-start"
+            className="w-full justify-start text-xs font-semibold"
             icon={<Trash2 className="w-4 h-4" />}
             style={{ color: c.dangerText }}
           >
@@ -232,7 +258,7 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
               <span>Irreversible Action</span>
             </div>
             <p>
-              Deleting your account will permanently wipe your profile, all historical cycle records, daily logs, partner connections, and push subscriptions.
+              Deleting your account will permanently wipe your profile, all historical cycle records, daily logs, and local account credentials.
             </p>
           </div>
 
@@ -254,28 +280,40 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onOpenPartner }) => {
               value={deleteConfirmText}
               onChange={e => setDeleteConfirmText(e.target.value)}
               placeholder="DELETE"
-              className="w-full min-h-touch px-4 rounded-2xl text-sm font-mono cy-input"
+              className="w-full min-h-touch px-4 rounded-xl text-sm cy-input"
+              style={{
+                backgroundColor: c.surfaceSoft,
+                borderColor: c.border,
+                color: c.text,
+              }}
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-2 pt-2">
             <Button
               variant="outline"
               size="md"
-              onClick={() => setDeleteModalOpen(false)}
+              onClick={() => {
+                setDeleteModalOpen(false);
+                setDeleteConfirmText('');
+              }}
               className="flex-1"
             >
               Cancel
             </Button>
             <Button
-              variant="danger"
+              variant="primary"
               size="md"
-              disabled={deleteConfirmText !== 'DELETE'}
               loading={deleting}
+              disabled={deleteConfirmText !== 'DELETE'}
               onClick={handleDeleteAccount}
               className="flex-1"
+              style={{
+                backgroundColor: deleteConfirmText === 'DELETE' ? c.dangerText : c.border,
+                borderColor: 'transparent',
+              }}
             >
-              Permanently Delete
+              Confirm Delete
             </Button>
           </div>
         </div>

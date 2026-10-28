@@ -4,7 +4,8 @@ import { useAuth } from './AuthContext';
 import { Cycle } from './types';
 import { calculateCycleStats, formatDateString } from './cycleStats';
 
-const LOCAL_CYCLES_KEY = 'cytrack_demo_cycles';
+const LEGACY_CYCLES_KEY = 'cytrack_demo_cycles';
+const getUserCyclesKey = (userId: string) => `cytrack_cycles_${userId}`;
 
 export function useCycles() {
   const { user, isDemoMode, profile } = useAuth();
@@ -20,16 +21,23 @@ export function useCycles() {
     }
 
     if (isDemoMode || !isSupabaseConfigured) {
-      const stored = localStorage.getItem(LOCAL_CYCLES_KEY);
-      if (stored) {
-        setCycles(JSON.parse(stored));
+      const userKey = getUserCyclesKey(user.id);
+      const userStored = localStorage.getItem(userKey);
+      const legacyStored = localStorage.getItem(LEGACY_CYCLES_KEY);
+
+      if (userStored) {
+        setCycles(JSON.parse(userStored));
+      } else if (legacyStored) {
+        const parsed = JSON.parse(legacyStored);
+        setCycles(parsed);
+        localStorage.setItem(userKey, JSON.stringify(parsed));
       } else {
         // Default initial demo cycle for testing
         const initialDate = new Date();
         initialDate.setDate(initialDate.getDate() - 12);
         const demo: Cycle[] = [
           {
-            id: 'demo-cycle-1',
+            id: 'cycle_' + Date.now(),
             user_id: user.id,
             start_date: formatDateString(initialDate),
             end_date: formatDateString(new Date(initialDate.getTime() + 4 * 24 * 60 * 60 * 1000)),
@@ -37,7 +45,8 @@ export function useCycles() {
             updated_at: new Date().toISOString(),
           },
         ];
-        localStorage.setItem(LOCAL_CYCLES_KEY, JSON.stringify(demo));
+        localStorage.setItem(userKey, JSON.stringify(demo));
+        localStorage.setItem(LEGACY_CYCLES_KEY, JSON.stringify(demo));
         setCycles(demo);
       }
       setLoading(false);
@@ -53,10 +62,21 @@ export function useCycles() {
         .order('start_date', { ascending: false });
 
       if (fetchErr) throw fetchErr;
-      setCycles((data as Cycle[]) || []);
+      const loaded = (data as Cycle[]) || [];
+      setCycles(loaded);
+      // Cache locally for offline resilience
+      if (user) {
+        localStorage.setItem(getUserCyclesKey(user.id), JSON.stringify(loaded));
+      }
       setError(null);
     } catch (err: any) {
-      console.error('Error fetching cycles:', err);
+      console.warn('Error fetching cycles from Supabase, checking local cache:', err);
+      if (user) {
+        const cached = localStorage.getItem(getUserCyclesKey(user.id));
+        if (cached) {
+          setCycles(JSON.parse(cached));
+        }
+      }
       setError(err.message || 'Failed to load cycles');
     } finally {
       setLoading(false);
@@ -67,12 +87,19 @@ export function useCycles() {
     fetchCycles();
   }, [fetchCycles]);
 
+  const saveLocalCycles = (updated: Cycle[]) => {
+    if (!user) return;
+    setCycles(updated);
+    localStorage.setItem(getUserCyclesKey(user.id), JSON.stringify(updated));
+    localStorage.setItem(LEGACY_CYCLES_KEY, JSON.stringify(updated));
+  };
+
   const startPeriod = async (startDate: string = formatDateString(new Date())) => {
     if (!user) return;
 
     if (isDemoMode || !isSupabaseConfigured) {
       const newCycle: Cycle = {
-        id: 'cycle-' + Date.now(),
+        id: 'cycle_' + Date.now(),
         user_id: user.id,
         start_date: startDate,
         end_date: null,
@@ -80,24 +107,37 @@ export function useCycles() {
         updated_at: new Date().toISOString(),
       };
       const updated = [newCycle, ...cycles];
-      setCycles(updated);
-      localStorage.setItem(LOCAL_CYCLES_KEY, JSON.stringify(updated));
+      saveLocalCycles(updated);
       return;
     }
 
-    const { data, error } = await supabase
-      .from('cycles')
-      .insert({
+    try {
+      const { data, error } = await supabase
+        .from('cycles')
+        .insert({
+          user_id: user.id,
+          start_date: startDate,
+          end_date: null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        const updated = [data as Cycle, ...cycles];
+        saveLocalCycles(updated);
+      }
+    } catch (e) {
+      // Fallback local
+      const newCycle: Cycle = {
+        id: 'cycle_' + Date.now(),
         user_id: user.id,
         start_date: startDate,
         end_date: null,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    if (data) {
-      setCycles(prev => [data as Cycle, ...prev]);
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      saveLocalCycles([newCycle, ...cycles]);
     }
   };
 
@@ -110,50 +150,54 @@ export function useCycles() {
       const updated = cycles.map(c =>
         c.id === activeCycle.id ? { ...c, end_date: endDate, updated_at: new Date().toISOString() } : c
       );
-      setCycles(updated);
-      localStorage.setItem(LOCAL_CYCLES_KEY, JSON.stringify(updated));
+      saveLocalCycles(updated);
       return;
     }
 
-    const { error } = await supabase
-      .from('cycles')
-      .update({ end_date: endDate, updated_at: new Date().toISOString() })
-      .eq('id', activeCycle.id);
+    try {
+      const { error } = await supabase
+        .from('cycles')
+        .update({ end_date: endDate, updated_at: new Date().toISOString() })
+        .eq('id', activeCycle.id);
 
-    if (error) throw error;
-    setCycles(prev =>
-      prev.map(c => (c.id === activeCycle.id ? { ...c, end_date: endDate } : c))
-    );
+      if (error) throw error;
+      const updated = cycles.map(c => (c.id === activeCycle.id ? { ...c, end_date: endDate } : c));
+      saveLocalCycles(updated);
+    } catch (e) {
+      const updated = cycles.map(c =>
+        c.id === activeCycle.id ? { ...c, end_date: endDate, updated_at: new Date().toISOString() } : c
+      );
+      saveLocalCycles(updated);
+    }
   };
 
   const updateCycle = async (id: string, updates: Partial<Cycle>) => {
-    if (isDemoMode || !isSupabaseConfigured) {
-      const updated = cycles.map(c => (c.id === id ? { ...c, ...updates } : c));
-      setCycles(updated);
-      localStorage.setItem(LOCAL_CYCLES_KEY, JSON.stringify(updated));
-      return;
+    const updated = cycles.map(c => (c.id === id ? { ...c, ...updates, updated_at: new Date().toISOString() } : c));
+    saveLocalCycles(updated);
+
+    if (isSupabaseConfigured && !isDemoMode) {
+      try {
+        await supabase
+          .from('cycles')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', id);
+      } catch (err) {
+        console.warn('Supabase cycle update warning:', err);
+      }
     }
-
-    const { error } = await supabase
-      .from('cycles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (error) throw error;
-    setCycles(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c)));
   };
 
   const deleteCycle = async (id: string) => {
-    if (isDemoMode || !isSupabaseConfigured) {
-      const updated = cycles.filter(c => c.id !== id);
-      setCycles(updated);
-      localStorage.setItem(LOCAL_CYCLES_KEY, JSON.stringify(updated));
-      return;
-    }
+    const updated = cycles.filter(c => c.id !== id);
+    saveLocalCycles(updated);
 
-    const { error } = await supabase.from('cycles').delete().eq('id', id);
-    if (error) throw error;
-    setCycles(prev => prev.filter(c => c.id !== id));
+    if (isSupabaseConfigured && !isDemoMode) {
+      try {
+        await supabase.from('cycles').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Supabase cycle delete warning:', err);
+      }
+    }
   };
 
   const stats = calculateCycleStats(

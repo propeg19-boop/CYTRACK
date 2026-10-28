@@ -4,7 +4,8 @@ import { useAuth } from './AuthContext';
 import { DailyLog, FlowLevel, MoodType, Symptom } from './types';
 import { formatDateString } from './cycleStats';
 
-const LOCAL_DAILY_LOGS_KEY = 'cytrack_demo_daily_logs';
+const LEGACY_DAILY_LOGS_KEY = 'cytrack_demo_daily_logs';
+const getUserLogsKey = (userId: string) => `cytrack_logs_${userId}`;
 
 export const DEFAULT_SYMPTOMS: Symptom[] = [
   { id: 'cramps', name: 'Cramps', category: 'physical', icon_name: 'Zap', sort_order: 1 },
@@ -37,9 +38,18 @@ export function useDailyLog(selectedDate: string = formatDateString(new Date()))
       return;
     }
 
+    const userKey = getUserLogsKey(user.id);
+    const userStored = localStorage.getItem(userKey);
+    const legacyStored = localStorage.getItem(LEGACY_DAILY_LOGS_KEY);
+
     if (isDemoMode || !isSupabaseConfigured) {
-      const stored = localStorage.getItem(LOCAL_DAILY_LOGS_KEY);
-      const logs: DailyLog[] = stored ? JSON.parse(stored) : [];
+      let logs: DailyLog[] = [];
+      if (userStored) {
+        logs = JSON.parse(userStored);
+      } else if (legacyStored) {
+        logs = JSON.parse(legacyStored);
+        localStorage.setItem(userKey, JSON.stringify(logs));
+      }
       setAllLogs(logs);
       const match = logs.find(l => l.log_date === selectedDate);
       setLog(match || null);
@@ -61,7 +71,14 @@ export function useDailyLog(selectedDate: string = formatDateString(new Date()))
           notes,
           created_at,
           updated_at,
-          daily_symptoms(symptom_id)
+          daily_log_symptoms (
+            symptoms (
+              id,
+              name,
+              category,
+              icon_name
+            )
+          )
         `)
         .eq('user_id', user.id)
         .order('log_date', { ascending: false });
@@ -76,16 +93,25 @@ export function useDailyLog(selectedDate: string = formatDateString(new Date()))
         mood: row.mood,
         energy: row.energy,
         notes: row.notes,
-        symptoms: row.daily_symptoms?.map((ds: any) => ds.symptom_id) || [],
+        symptoms: (row.daily_log_symptoms || [])
+          .map((dls: any) => dls.symptoms?.id)
+          .filter(Boolean),
         created_at: row.created_at,
         updated_at: row.updated_at,
       }));
 
       setAllLogs(formattedLogs);
-      const current = formattedLogs.find(l => l.log_date === selectedDate);
-      setLog(current || null);
+      localStorage.setItem(userKey, JSON.stringify(formattedLogs));
+      const match = formattedLogs.find(l => l.log_date === selectedDate);
+      setLog(match || null);
     } catch (err) {
-      console.error('Error fetching daily logs:', err);
+      console.warn('Error fetching daily logs from Supabase, checking local cache:', err);
+      if (userStored) {
+        const cached = JSON.parse(userStored);
+        setAllLogs(cached);
+        const match = cached.find((l: DailyLog) => l.log_date === selectedDate);
+        setLog(match || null);
+      }
     } finally {
       setLoading(false);
     }
@@ -105,35 +131,38 @@ export function useDailyLog(selectedDate: string = formatDateString(new Date()))
     if (!user) return;
     setSaving(true);
 
+    const userKey = getUserLogsKey(user.id);
+    const stored = localStorage.getItem(userKey);
+    const logs: DailyLog[] = stored ? JSON.parse(stored) : [];
+    const existingIdx = logs.findIndex(l => l.log_date === selectedDate);
+
+    const updatedLog: DailyLog = {
+      id: existingIdx >= 0 ? logs[existingIdx].id : 'log_' + Date.now(),
+      user_id: user.id,
+      log_date: selectedDate,
+      flow: data.flow,
+      mood: data.mood,
+      energy: data.energy,
+      notes: data.notes,
+      symptoms: data.symptoms || [],
+      created_at: existingIdx >= 0 ? logs[existingIdx].created_at : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    let newLogsList: DailyLog[];
+    if (existingIdx >= 0) {
+      newLogsList = [...logs];
+      newLogsList[existingIdx] = updatedLog;
+    } else {
+      newLogsList = [updatedLog, ...logs];
+    }
+
+    localStorage.setItem(userKey, JSON.stringify(newLogsList));
+    localStorage.setItem(LEGACY_DAILY_LOGS_KEY, JSON.stringify(newLogsList));
+    setLog(updatedLog);
+    setAllLogs(newLogsList);
+
     if (isDemoMode || !isSupabaseConfigured) {
-      const stored = localStorage.getItem(LOCAL_DAILY_LOGS_KEY);
-      const logs: DailyLog[] = stored ? JSON.parse(stored) : [];
-      const existingIdx = logs.findIndex(l => l.log_date === selectedDate);
-
-      const updatedLog: DailyLog = {
-        id: existingIdx >= 0 ? logs[existingIdx].id : 'log-' + Date.now(),
-        user_id: user.id,
-        log_date: selectedDate,
-        flow: data.flow,
-        mood: data.mood,
-        energy: data.energy,
-        notes: data.notes,
-        symptoms: data.symptoms || [],
-        created_at: existingIdx >= 0 ? logs[existingIdx].created_at : new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      let newLogsList: DailyLog[];
-      if (existingIdx >= 0) {
-        newLogsList = [...logs];
-        newLogsList[existingIdx] = updatedLog;
-      } else {
-        newLogsList = [updatedLog, ...logs];
-      }
-
-      localStorage.setItem(LOCAL_DAILY_LOGS_KEY, JSON.stringify(newLogsList));
-      setLog(updatedLog);
-      setAllLogs(newLogsList);
       setSaving(false);
       return;
     }
@@ -158,22 +187,19 @@ export function useDailyLog(selectedDate: string = formatDateString(new Date()))
 
       if (upsertErr) throw upsertErr;
 
-      if (upsertedLog && data.symptoms !== undefined) {
-        await supabase.from('daily_symptoms').delete().eq('daily_log_id', upsertedLog.id);
+      if (upsertedLog && data.symptoms) {
+        await supabase.from('daily_log_symptoms').delete().eq('daily_log_id', upsertedLog.id);
 
         if (data.symptoms.length > 0) {
-          const symptomInserts = data.symptoms.map(symId => ({
+          const symptomInserts = data.symptoms.map(sId => ({
             daily_log_id: upsertedLog.id,
-            symptom_id: symId,
+            symptom_id: sId,
           }));
-          await supabase.from('daily_symptoms').insert(symptomInserts);
+          await supabase.from('daily_log_symptoms').insert(symptomInserts);
         }
       }
-
-      await fetchLogs();
-    } catch (err: any) {
-      console.error('Error saving daily log:', err);
-      throw err;
+    } catch (err) {
+      console.warn('Supabase log upsert warning (saved locally):', err);
     } finally {
       setSaving(false);
     }
@@ -186,6 +212,6 @@ export function useDailyLog(selectedDate: string = formatDateString(new Date()))
     loading,
     saving,
     saveLog,
-    refetch: fetchLogs,
+    refreshLog: fetchLogs,
   };
 }

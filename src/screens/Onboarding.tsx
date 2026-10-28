@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
+import { useTheme } from '../lib/ThemeContext';
 import { Button } from '../components/Button';
 import { formatDateString, calculateCycleStats } from '../lib/cycleStats';
-import { Sparkles, Calendar, Heart, Shield, ArrowRight, Check, Compass } from 'lucide-react';
+import { Sparkles, Calendar, Heart, Shield, ArrowRight, Check, Compass, ChevronLeft, Minus, Plus } from 'lucide-react';
 
 export const OnboardingScreen: React.FC = () => {
   const { completeOnboarding } = useAuth();
+  const { theme } = useTheme();
+  const c = theme.colors;
+
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [loading, setLoading] = useState(false);
 
@@ -63,14 +67,20 @@ export const OnboardingScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-warm-100 flex flex-col justify-between p-4 sm:p-6 max-w-lg mx-auto">
+    <div
+      className="min-h-screen flex flex-col justify-between p-4 sm:p-6 max-w-lg mx-auto relative z-10 transition-colors duration-400"
+      style={{ backgroundColor: 'transparent' }}
+    >
+      {/* Stepper Header */}
       <div className="pt-4 flex items-center justify-between gap-2">
         {[1, 2, 3, 4].map(s => (
           <div
             key={s}
-            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-              s <= step ? 'bg-terracotta-500' : 'bg-warm-200'
-            }`}
+            className="h-2 flex-1 rounded-full transition-all duration-300"
+            style={{
+              backgroundColor: s <= step ? c.primary : c.borderSoft,
+              boxShadow: s === step ? `0 0 10px ${c.primary}60` : 'none',
+            }}
           />
         ))}
       </div>
@@ -78,24 +88,38 @@ export const OnboardingScreen: React.FC = () => {
       <div className="my-auto py-8">
         {step === 1 && (
           <div className="space-y-6 text-center animate-fade-in">
-            <div className="w-20 h-20 rounded-3xl bg-terracotta-100 text-terracotta-600 flex items-center justify-center mx-auto shadow-card">
+            <div
+              className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-card transform hover:scale-105 transition-all"
+              style={{
+                background: `linear-gradient(135deg, ${c.primarySoft}, ${c.accentSoft})`,
+                color: c.primary,
+                border: `1px solid ${c.border}`,
+              }}
+            >
               <Sparkles className="w-10 h-10" />
             </div>
             <div className="space-y-3">
-              <h1 className="font-serif text-3xl sm:text-4xl font-bold text-warm-900 tracking-tight">
+              <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight" style={{ color: c.text }}>
                 Let's make CYTRACK yours.
               </h1>
-              <p className="text-warm-600 text-base leading-relaxed max-w-sm mx-auto">
-                We'll ask a few simple questions so your very first day inside the app provides immediate clarity.
+              <p className="text-sm leading-relaxed max-w-sm mx-auto" style={{ color: c.textMuted }}>
+                We'll ask a few gentle questions so your very first day provides immediate cycle clarity.
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-white/70 border border-warm-200 text-left space-y-2 text-xs text-warm-700">
-              <div className="flex items-center gap-2 font-semibold text-warm-900">
-                <Shield className="w-4 h-4 text-terracotta-500" />
-                <span>Privacy First by Design</span>
+
+            <div
+              className="p-5 rounded-3xl text-left space-y-2.5 text-xs shadow-soft backdrop-blur-sm"
+              style={{
+                background: c.cardBg,
+                border: `1px solid ${c.cardBorder}`,
+              }}
+            >
+              <div className="flex items-center gap-2 font-bold" style={{ color: c.text }}>
+                <Shield className="w-4 h-4" style={{ color: c.primary }} />
+                <span>Zero Speculation • Private by Design</span>
               </div>
-              <p>
-                Your biological data is strictly yours. We use deterministic mathematics for cycle estimates, not speculative AI.
+              <p className="leading-relaxed" style={{ color: c.textMuted }}>
+                Your biological data is stored directly on your personal device with deterministic mathematics, not sold to advertisers.
               </p>
             </div>
           </div>
@@ -104,71 +128,128 @@ export const OnboardingScreen: React.FC = () => {
         {step === 2 && (
           <div className="space-y-6 animate-fade-in">
             <div>
-              <span className="text-xs font-semibold text-terracotta-600 tracking-wider uppercase">Step 1 of 3</span>
-              <h2 className="font-serif text-2xl font-bold text-warm-900 mt-1">Your Cycle Baseline</h2>
-              <p className="text-xs text-warm-600">Give us your best estimate — you can always adjust this later.</p>
+              <span className="text-xs font-bold tracking-wider uppercase" style={{ color: c.primary }}>
+                Step 1 of 3
+              </span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold mt-1" style={{ color: c.text }}>
+                Your Cycle Baseline
+              </h2>
+              <p className="text-xs mt-1" style={{ color: c.textMuted }}>
+                Give us your best estimate — you can adjust this anytime in Settings.
+              </p>
             </div>
 
-            <div className="space-y-4 bg-white p-6 rounded-3xl border border-warm-200 shadow-soft">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-warm-800">
+            <div
+              className="space-y-5 p-6 rounded-[2rem] shadow-card backdrop-blur-sm"
+              style={{
+                background: c.cardBg,
+                border: `1px solid ${c.cardBorder}`,
+              }}
+            >
+              <div className="space-y-2">
+                <label className="block text-xs font-bold" style={{ color: c.text }}>
                   When did your most recent period begin?
                 </label>
-                <input
-                  type="date"
-                  value={lastPeriodStart}
-                  onChange={e => setLastPeriodStart(e.target.value)}
-                  className="w-full min-h-touch px-4 rounded-2xl border border-warm-300 focus:border-terracotta-500 bg-warm-50/50 text-warm-900 text-sm"
-                />
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={lastPeriodStart}
+                    onChange={e => setLastPeriodStart(e.target.value)}
+                    className="w-full min-h-touch px-4 rounded-2xl text-sm transition-all cy-input shadow-inner"
+                    style={{
+                      backgroundColor: c.surfaceSoft,
+                      borderColor: c.border,
+                      color: c.text,
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-warm-800">
-                    Typical Cycle (Days)
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold" style={{ color: c.text }}>
+                    Typical Cycle
                   </label>
-                  <input
-                    type="number"
-                    min="20"
-                    max="50"
-                    value={cycleLength}
-                    onChange={e => setCycleLength(Number(e.target.value))}
-                    className="w-full min-h-touch px-4 rounded-2xl border border-warm-300 focus:border-terracotta-500 bg-warm-50/50 text-warm-900 text-sm font-medium"
-                  />
-                  <span className="text-[11px] text-warm-500">Average is 28 days</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCycleLength(prev => Math.max(20, prev - 1))}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center border font-bold text-sm"
+                      style={{ background: c.surfaceSoft, borderColor: c.border, color: c.text }}
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="flex-1 text-center font-bold text-sm" style={{ color: c.text }}>
+                      {cycleLength} days
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCycleLength(prev => Math.min(50, prev + 1))}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center border font-bold text-sm"
+                      style={{ background: c.surfaceSoft, borderColor: c.border, color: c.text }}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <span className="text-[11px] block text-center" style={{ color: c.textMuted }}>
+                    Avg: 28 days
+                  </span>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-semibold text-warm-800">
-                    Period Bleed (Days)
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold" style={{ color: c.text }}>
+                    Bleed Duration
                   </label>
-                  <input
-                    type="number"
-                    min="2"
-                    max="10"
-                    value={periodDuration}
-                    onChange={e => setPeriodDuration(Number(e.target.value))}
-                    className="w-full min-h-touch px-4 rounded-2xl border border-warm-300 focus:border-terracotta-500 bg-warm-50/50 text-warm-900 text-sm font-medium"
-                  />
-                  <span className="text-[11px] text-warm-500">Average is 4-6 days</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPeriodDuration(prev => Math.max(2, prev - 1))}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center border font-bold text-sm"
+                      style={{ background: c.surfaceSoft, borderColor: c.border, color: c.text }}
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="flex-1 text-center font-bold text-sm" style={{ color: c.text }}>
+                      {periodDuration} days
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPeriodDuration(prev => Math.min(12, prev + 1))}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center border font-bold text-sm"
+                      style={{ background: c.surfaceSoft, borderColor: c.border, color: c.text }}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <span className="text-[11px] block text-center" style={{ color: c.textMuted }}>
+                    Avg: 4-6 days
+                  </span>
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-warm-100 flex items-center justify-between">
+              <div
+                className="pt-3 flex items-center justify-between"
+                style={{ borderTop: `1px solid ${c.borderSoft}` }}
+              >
                 <div>
-                  <span className="text-xs font-medium text-warm-900">Are your cycles regular?</span>
-                  <p className="text-[11px] text-warm-500">Helps refine estimation ranges</p>
+                  <span className="text-xs font-semibold" style={{ color: c.text }}>
+                    Are your cycles regular?
+                  </span>
+                  <p className="text-[11px]" style={{ color: c.textMuted }}>
+                    Refines estimation boundaries
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setCyclesRegular(!cyclesRegular)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                    cyclesRegular
-                      ? 'bg-sage-100 text-sage-700 border border-sage-200'
-                      : 'bg-warm-100 text-warm-600 border border-warm-200'
-                  }`}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all"
+                  style={{
+                    backgroundColor: cyclesRegular ? c.primarySoft : c.surfaceSoft,
+                    color: cyclesRegular ? c.primary : c.textMuted,
+                    border: `1px solid ${cyclesRegular ? c.primary + '40' : c.border}`,
+                  }}
                 >
-                  {cyclesRegular ? 'Regular' : 'Irregular / Varies'}
+                  {cyclesRegular ? '✓ Regular' : 'Varies'}
                 </button>
               </div>
             </div>
@@ -178,14 +259,22 @@ export const OnboardingScreen: React.FC = () => {
         {step === 3 && (
           <div className="space-y-6 animate-fade-in">
             <div>
-              <span className="text-xs font-semibold text-terracotta-600 tracking-wider uppercase">Step 2 of 3</span>
-              <h2 className="font-serif text-2xl font-bold text-warm-900 mt-1">Tone & Focus</h2>
-              <p className="text-xs text-warm-600">Personalize how CYTRACK supports you day-to-day.</p>
+              <span className="text-xs font-bold tracking-wider uppercase" style={{ color: c.primary }}>
+                Step 2 of 3
+              </span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold mt-1" style={{ color: c.text }}>
+                Focus & Daily Tone
+              </h2>
+              <p className="text-xs mt-1" style={{ color: c.textMuted }}>
+                Personalize how CYTRACK communicates with you.
+              </p>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-warm-800">What is your primary goal?</label>
+                <label className="block text-xs font-bold" style={{ color: c.text }}>
+                  What is your primary focus?
+                </label>
                 <div className="grid grid-cols-1 gap-2.5">
                   {goals.map(g => {
                     const Icon = g.icon;
@@ -195,20 +284,25 @@ export const OnboardingScreen: React.FC = () => {
                         key={g.id}
                         type="button"
                         onClick={() => setPrimaryGoal(g.id)}
-                        className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all min-h-touch ${
-                          isSelected
-                            ? 'bg-terracotta-50/80 border-terracotta-400 text-terracotta-900 shadow-soft'
-                            : 'bg-white border-warm-200 text-warm-700 hover:border-warm-300'
-                        }`}
+                        className="flex items-center gap-3.5 p-3.5 rounded-2xl border text-left transition-all duration-200"
+                        style={{
+                          backgroundColor: isSelected ? c.primarySoft : c.cardBg,
+                          borderColor: isSelected ? c.primary : c.cardBorder,
+                          boxShadow: isSelected ? `0 4px 16px ${c.primary}20` : 'none',
+                        }}
                       >
                         <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                            isSelected ? 'bg-terracotta-500 text-white' : 'bg-warm-100 text-warm-600'
-                          }`}
+                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                          style={{
+                            backgroundColor: isSelected ? c.primary : c.surfaceSoft,
+                            color: isSelected ? c.textInverse : c.textMuted,
+                          }}
                         >
-                          <Icon className="w-5 h-5" />
+                          <Icon className="w-4 h-4" />
                         </div>
-                        <span className="text-xs font-medium">{g.label}</span>
+                        <span className="text-xs font-bold" style={{ color: isSelected ? c.primary : c.text }}>
+                          {g.label}
+                        </span>
                       </button>
                     );
                   })}
@@ -216,8 +310,10 @@ export const OnboardingScreen: React.FC = () => {
               </div>
 
               <div className="space-y-2 pt-2">
-                <label className="block text-xs font-semibold text-warm-800">How should CYTRACK feel?</label>
-                <div className="grid grid-cols-2 gap-2">
+                <label className="block text-xs font-bold" style={{ color: c.text }}>
+                  How should daily insights feel?
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
                   {tones.map(t => {
                     const isSelected = preferredTone === t.id;
                     return (
@@ -225,14 +321,19 @@ export const OnboardingScreen: React.FC = () => {
                         key={t.id}
                         type="button"
                         onClick={() => setPreferredTone(t.id)}
-                        className={`p-3 rounded-2xl border text-left transition-all min-h-touch ${
-                          isSelected
-                            ? 'bg-terracotta-50/80 border-terracotta-400 text-terracotta-900 shadow-soft'
-                            : 'bg-white border-warm-200 text-warm-700 hover:border-warm-300'
-                        }`}
+                        className="p-3.5 rounded-2xl border text-left transition-all duration-200"
+                        style={{
+                          backgroundColor: isSelected ? c.primarySoft : c.cardBg,
+                          borderColor: isSelected ? c.primary : c.cardBorder,
+                          boxShadow: isSelected ? `0 4px 16px ${c.primary}20` : 'none',
+                        }}
                       >
-                        <div className="text-xs font-semibold">{t.label}</div>
-                        <div className="text-[10px] text-warm-500 mt-0.5">{t.desc}</div>
+                        <div className="text-xs font-bold" style={{ color: isSelected ? c.primary : c.text }}>
+                          {t.label}
+                        </div>
+                        <div className="text-[10px] mt-1 line-clamp-2" style={{ color: c.textMuted }}>
+                          {t.desc}
+                        </div>
                       </button>
                     );
                   })}
@@ -244,42 +345,63 @@ export const OnboardingScreen: React.FC = () => {
 
         {step === 4 && (
           <div className="space-y-6 animate-fade-in text-center">
-            <div className="w-16 h-16 rounded-3xl bg-sage-100 text-sage-600 flex items-center justify-center mx-auto shadow-card">
-              <Check className="w-8 h-8" />
+            <div
+              className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-card transform hover:scale-105 transition-all"
+              style={{
+                backgroundColor: c.successBg,
+                color: c.successText,
+                border: `1px solid ${c.successText}30`,
+              }}
+            >
+              <Check className="w-10 h-10" />
             </div>
-            <div className="space-y-1">
-              <h2 className="font-serif text-3xl font-bold text-warm-900">You're all set.</h2>
-              <p className="text-xs text-warm-600">Here is your initial cycle baseline:</p>
+            <div className="space-y-2">
+              <h2 className="font-serif text-3xl font-bold" style={{ color: c.text }}>
+                You're All Set!
+              </h2>
+              <p className="text-sm max-w-sm mx-auto" style={{ color: c.textMuted }}>
+                Based on your baseline, your initial cycle map has been rendered below.
+              </p>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 border border-warm-200 shadow-card space-y-4 text-left">
-              <div className="flex items-center justify-between border-b border-warm-100 pb-3">
-                <span className="text-xs text-warm-500">Current Position</span>
-                <span className="text-sm font-bold text-terracotta-600">
-                  Day {estimatedCycle.currentCycleDay || 1} of Cycle
+            <div
+              className="p-5 rounded-[2rem] text-left space-y-3 shadow-card backdrop-blur-sm"
+              style={{
+                backgroundColor: c.cardBg,
+                borderColor: c.cardBorder,
+                borderWidth: '1px',
+              }}
+            >
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-semibold" style={{ color: c.textMuted }}>
+                  Estimated Current Cycle Day:
+                </span>
+                <span className="font-bold text-sm px-2.5 py-0.5 rounded-full" style={{ backgroundColor: c.primarySoft, color: c.primary }}>
+                  Day {estimatedCycle.currentCycleDay || 1}
                 </span>
               </div>
-
-              <div className="flex items-center justify-between border-b border-warm-100 pb-3">
-                <span className="text-xs text-warm-500">Estimated Next Period</span>
-                <span className="text-sm font-semibold text-warm-900">
-                  {estimatedCycle.estimatedPeriodWindow
-                    ? `${estimatedCycle.estimatedPeriodWindow.start} to ${estimatedCycle.estimatedPeriodWindow.end}`
-                    : 'Upcoming in approx. 2 weeks'}
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-semibold" style={{ color: c.textMuted }}>
+                  Typical Cycle Length:
+                </span>
+                <span className="font-bold" style={{ color: c.text }}>
+                  {cycleLength} days
                 </span>
               </div>
-
-              <div className="p-3 bg-warm-50 rounded-2xl text-[11px] text-warm-600 space-y-1">
-                <p className="font-medium text-warm-800">How this estimation works:</p>
-                <p>
-                  Computed deterministically from your {cycleLength}-day baseline. As you log future cycles, CYTRACK will continuously refine precision based on your actual history.
-                </p>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-semibold" style={{ color: c.textMuted }}>
+                  Next Period Estimate:
+                </span>
+                <span className="font-bold" style={{ color: c.primary }}>
+                  {estimatedCycle.estimatedNextPeriodStart || 'Calculated soon'}
+                </span>
               </div>
             </div>
           </div>
         )}
       </div>
 
+      {/* Navigation Buttons */}
       <div className="pb-4 flex items-center gap-3">
         {step > 1 && (
           <Button
@@ -288,7 +410,8 @@ export const OnboardingScreen: React.FC = () => {
             onClick={() => setStep((step - 1) as any)}
             className="flex-1"
           >
-            Back
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            <span>Back</span>
           </Button>
         )}
         <Button
@@ -302,10 +425,10 @@ export const OnboardingScreen: React.FC = () => {
               handleFinishOnboarding();
             }
           }}
-          className="flex-1"
-          icon={<ArrowRight className="w-4 h-4" />}
+          className="flex-1 shadow-soft"
         >
-          {step === 4 ? 'Enter CYTRACK' : 'Continue'}
+          <span>{step === 4 ? 'Enter CYTRACK' : 'Continue'}</span>
+          <ArrowRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
     </div>
